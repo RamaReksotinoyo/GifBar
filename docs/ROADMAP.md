@@ -66,14 +66,19 @@ Iterasi 4 adalah jantung aplikasi.
 ## Iterasi 4 — Capture pipeline inti (paling berat)
 **Tujuan:** rekam area terpilih ke temp file.
 
-- [ ] `SCStreamCoordinator` (satu-satunya `class`, delegate `SCStream`)
-- [ ] `SCContentFilter` dari rect terpilih + `SCStreamConfiguration` (fps sesuai state)
-- [ ] **KUNCI keputusan arsitektur** (resolusi inkonsistensi §3.3 vs §4.4):
-  - **Opsi A (rekomendasi):** `CMSampleBuffer` → langsung `AVAssetWriter` ke temp `.mov`. RAM minimal, tanpa `pixelPool` Swift array.
-  - **Opsi B:** akumulasi frame di FrameBuffer SoA in-memory.
-  - Tidak bisa dua-duanya — §3.3 dan §4.4 saling meniadakan.
+**KEPUTUSAN ARSITEKTUR (final): Opsi A** — `CMSampleBuffer` → langsung `AVAssetWriter` ke temp `.mov`. RAM minimal (§4.4). SoA/cache-locality §3.3 **tidak dipakai** (Opsi B butuh ratusan MB RAM). Dipecah jadi 4a (teruji) → 4b (capture nyata).
 
-**Bukti selesai:** Start → Stop menghasilkan temp `.mov` valid & bisa diputar.
+### 4a — Config + Writer (selesai)
+- [x] `CaptureConfiguration` murni: `sourceRect` display-relative, dimensi piksel (even), frame interval, pilih display by overlap
+- [x] `MovieWriter` bungkus `AVAssetWriter` → temp `.mov` (nonisolated, drop-frame on not-ready per §4.5)
+- [x] Unit tests config-math + integration test MovieWriter pakai frame sintetis (11 tests)
+
+### 4b — Capture nyata (belum)
+- [ ] `SCStreamCoordinator` (satu-satunya `class`, delegate `SCStream`)
+- [ ] `SCContentFilter` (display + exclude window app) + `SCStreamConfiguration` dari `CaptureConfiguration`
+- [ ] Wire ke `RecordingStore`: `recording` → mulai capture; `stop` → finalize `.mov` → `conversionFinished`
+
+**Bukti selesai (4a):** build + `xcodebuild test` hijau (44 tests). **Bukti 4b:** Start → Stop hasilkan temp `.mov` valid (verifikasi dengan menjalankan app).
 
 ---
 
