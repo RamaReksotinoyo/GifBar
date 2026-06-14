@@ -14,13 +14,27 @@ struct GifBarApp: App {
     /// content (which opens it) and the view (which dismisses it).
     static let onboardingWindowID = "onboarding"
 
+    /// Holds the recording lifecycle state, observed by the menu.
+    private let store = RecordingStore()
+
     /// Owns the selection panel's lifetime; created once so it survives the
     /// repeated re-evaluation of the menu bar content.
     private let overlayController = SelectionOverlayController()
 
+    init() {
+        // The selection panel reports its outcome straight into the state
+        // machine: a committed rect starts recording, Esc cancels.
+        overlayController.onCommit = { [store] rect in
+            store.send(.startRecording(rect))
+        }
+        overlayController.onCancel = { [store] in
+            store.send(.cancelSelection)
+        }
+    }
+
     var body: some Scene {
         MenuBarExtra("GifBar", systemImage: "record.circle") {
-            MenuBarContent(overlayController: overlayController)
+            MenuBarContent(store: store, overlayController: overlayController)
         }
 
         Window("Welcome to GifBar", id: Self.onboardingWindowID) {
@@ -42,6 +56,9 @@ struct GifBarApp: App {
 struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
 
+    /// Recording lifecycle state; the menu re-renders as its status changes.
+    let store: RecordingStore
+
     /// Coordinator that presents the floating selection panel.
     let overlayController: SelectionOverlayController
 
@@ -49,7 +66,9 @@ struct MenuBarContent: View {
     var permission: ScreenRecordingPermission = .live
 
     var body: some View {
-        Button("Record Area") { recordArea() }
+        statusItems
+
+        Divider()
 
         Button("Preferences…") {
             // TODO: Iteration 7 — open the Preferences panel.
@@ -63,16 +82,42 @@ struct MenuBarContent: View {
         .keyboardShortcut("q")
     }
 
+    /// Menu items that depend on where we are in the recording lifecycle.
+    @ViewBuilder
+    private var statusItems: some View {
+        switch store.state.status {
+        case .idle:
+            Button("Record Area") { recordArea() }
+
+        case .selecting:
+            Button("Cancel Selection") {
+                overlayController.dismiss()
+                store.send(.cancelSelection)
+            }
+
+        case .recording:
+            Text("Recording \(store.state.elapsedDisplay)")
+            Button("Stop Recording") { store.send(.stopRecording) }
+
+        case .converting:
+            Text("Converting…")
+
+        case .done:
+            Text("Done")
+        }
+    }
+
     /// Lazily ensures Screen Recording access on first use (SPEC §5, option B).
     ///
-    /// When access is granted the recording flow continues; otherwise the
+    /// When access is granted the selection flow begins; otherwise the
     /// onboarding window is brought to the front to guide the user.
     private func recordArea() {
-        if permission.ensureAccess() == .granted {
-            overlayController.present()
-        } else {
+        guard permission.ensureAccess() == .granted else {
             NSApp.activate(ignoringOtherApps: true)
             openWindow(id: GifBarApp.onboardingWindowID)
+            return
         }
+        store.send(.selectArea)
+        overlayController.present()
     }
 }

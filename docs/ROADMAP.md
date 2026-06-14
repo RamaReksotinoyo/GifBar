@@ -52,11 +52,14 @@ Iterasi 4 adalah jantung aplikasi.
 ## Iterasi 3 — State machine (§4.3)
 **Tujuan:** lifecycle resmi sebelum menyentuh capture.
 
-- [ ] `struct RecordingState` + `enum Status` sesuai §4.3
-- [ ] `FrameRate` default `.fps15` (sinkronkan dengan §4.5)
-- [ ] Transisi: `idle → selecting → recording → converting → done`
+- [x] `struct RecordingState` + `enum Status` sesuai §4.3 (`Sendable`, `Equatable`)
+- [x] `FrameRate` default `.fps15` (benahi inkonsistensi §4.5)
+- [x] Transisi via `Event` + reducer murni `apply(_:)` — transisi ilegal ditolak
+- [x] `RecordingStore` (`@Observable`) + timer elapsed; menu reaktif terhadap status
+- [x] Sambung `onCommit`/`onCancel` overlay → state machine
+- [x] Unit tests transisi legal/ilegal, tick, reset, format elapsed (13 tests)
 
-**Bukti selesai:** UI berubah sesuai status (Start/Stop muncul di state yang benar). Murni state, belum ada frame.
+**Bukti selesai:** build + `xcodebuild test` hijau (33 tests). `recording`/`converting` masih placeholder (belum ada frame) sampai Iterasi 4.
 
 ---
 
