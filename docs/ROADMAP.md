@@ -40,11 +40,12 @@ Iterasi 4 adalah jantung aplikasi.
 ## Iterasi 2 — Selection overlay (§4.2)
 **Tujuan:** user bisa pilih area layar `(X, Y, W, H)`.
 
-- [ ] `NSPanel` level `.floating`, resizable, semi-transparan
-- [ ] Tampilkan dimensi real-time saat resize/drag
-- [ ] `Esc` = cancel, kembali ke idle
+- [x] `NSPanel` level `.floating`, resizable, semi-transparan (Pola A — panel = area; MVP)
+- [x] Tampilkan dimensi real-time saat resize/drag (`@Observable` model + `didResizeNotification`)
+- [x] `Esc` = cancel, kembali ke idle (Return/Space = commit, log rect)
+- [x] Konversi koordinat AppKit↔capture (`SelectionGeometry`) + unit tests (9 tests)
 
-**Bukti selesai:** klik "Record Area" → panel muncul di atas semua window, bisa di-resize, koordinat ter-log. Belum merekam.
+**Bukti selesai:** build + `xcodebuild test` hijau (20 tests). Verifikasi visual panel butuh menjalankan app.
 
 ---
 

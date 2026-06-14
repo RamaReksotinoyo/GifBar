@@ -14,9 +14,13 @@ struct GifBarApp: App {
     /// content (which opens it) and the view (which dismisses it).
     static let onboardingWindowID = "onboarding"
 
+    /// Owns the selection panel's lifetime; created once so it survives the
+    /// repeated re-evaluation of the menu bar content.
+    private let overlayController = SelectionOverlayController()
+
     var body: some Scene {
         MenuBarExtra("GifBar", systemImage: "record.circle") {
-            MenuBarContent()
+            MenuBarContent(overlayController: overlayController)
         }
 
         Window("Welcome to GifBar", id: Self.onboardingWindowID) {
@@ -37,6 +41,9 @@ struct GifBarApp: App {
 /// `openWindow` environment action, which is unavailable directly in `App`.
 struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
+
+    /// Coordinator that presents the floating selection panel.
+    let overlayController: SelectionOverlayController
 
     /// The permission gateway; injectable for previews and tests.
     var permission: ScreenRecordingPermission = .live
@@ -62,7 +69,7 @@ struct MenuBarContent: View {
     /// onboarding window is brought to the front to guide the user.
     private func recordArea() {
         if permission.ensureAccess() == .granted {
-            // TODO: Iteration 2 — present the selection overlay.
+            overlayController.present()
         } else {
             NSApp.activate(ignoringOtherApps: true)
             openWindow(id: GifBarApp.onboardingWindowID)
