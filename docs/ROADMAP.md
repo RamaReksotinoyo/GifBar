@@ -24,9 +24,11 @@ Iterasi 4 adalah jantung aplikasi.
 ## Iterasi 1 — Permission & onboarding (§5)
 **Tujuan:** dapat izin Screen Recording sebelum fitur apa pun.
 
-- [ ] Tambah `NSScreenCaptureUsageDescription` di Info.plist
-- [ ] Panggil `SCShareableContent.current` → trigger dialog izin
-- [ ] Simpan status izin; jika ditolak, tampilkan tombol "Open System Settings"
+- [x] Tambah `NSScreenCaptureUsageDescription` di Info.plist
+- [x] Trigger dialog izin (pakai `CGRequestScreenCaptureAccess` — lebih bersih dari `SCShareableContent` untuk gerbang izin; SCK dipakai nanti di Iterasi 4)
+- [x] Tentukan status izin; jika ditolak, tampilkan tombol "Open System Settings"
+- [x] Cek izin secara lazy saat klik "Record Area" (opsi B)
+- [x] Unit + integration tests (11 tests, semua lulus)
 
 **Bukti selesai:** first launch memunculkan dialog izin macOS; setelah diizinkan, app tahu statusnya.
 
