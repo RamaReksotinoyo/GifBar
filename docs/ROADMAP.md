@@ -73,12 +73,14 @@ Iterasi 4 adalah jantung aplikasi.
 - [x] `MovieWriter` bungkus `AVAssetWriter` → temp `.mov` (nonisolated, drop-frame on not-ready per §4.5)
 - [x] Unit tests config-math + integration test MovieWriter pakai frame sintetis (11 tests)
 
-### 4b — Capture nyata (belum)
-- [ ] `SCStreamCoordinator` (satu-satunya `class`, delegate `SCStream`)
-- [ ] `SCContentFilter` (display + exclude window app) + `SCStreamConfiguration` dari `CaptureConfiguration`
-- [ ] Wire ke `RecordingStore`: `recording` → mulai capture; `stop` → finalize `.mov` → `conversionFinished`
+### 4b — Capture nyata (kode selesai, verifikasi runtime pending)
+- [x] `SCStreamCoordinator` (satu-satunya `class`/NSObject, delegate `SCStream`, `nonisolated`)
+- [x] `SCContentFilter` (display + exclude app sendiri) + `SCStreamConfiguration` dari `CaptureConfiguration`
+- [x] Hanya tulis frame `.complete`; drop-frame saat writer not-ready (§4.5)
+- [x] Wire ke `RecordingStore`: `recording` → `coordinator.start`; `stop` → `coordinator.stop` → finalize `.mov` → `conversionFinished`; simpan `lastRecordingURL`
+- [x] **Verifikasi runtime**: Record→Stop menghasilkan temp `.mov` valid (terbukti: rekaman 17,9s & 7,9s, dimensi benar, H.264; even-rounding 1033→1034 jalan; log bersih)
 
-**Bukti selesai (4a):** build + `xcodebuild test` hijau (44 tests). **Bukti 4b:** Start → Stop hasilkan temp `.mov` valid (verifikasi dengan menjalankan app).
+**Bukti:** build + `xcodebuild test` hijau (44 tests) + verifikasi runtime multi-monitor sukses. **Iterasi 4 SELESAI.**
 
 ---
 

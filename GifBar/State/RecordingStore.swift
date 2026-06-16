@@ -20,21 +20,29 @@ final class RecordingStore {
     /// ``send(_:)`` (and the internal timer).
     private(set) var state = RecordingState()
 
+    /// Temp `.mov` produced by the last recording, awaiting GIF conversion
+    /// (Iteration 5).
+    private(set) var lastRecordingURL: URL?
+
+    private let coordinator: SCStreamCoordinator
     private var timer: Timer?
 
+    init(coordinator: SCStreamCoordinator = SCStreamCoordinator()) {
+        self.coordinator = coordinator
+    }
+
     /// Applies an event to the state machine and reconciles side effects
-    /// (timer, placeholder progression) with the resulting status.
+    /// (timer, capture lifecycle) with the resulting status.
     func send(_ event: RecordingState.Event) {
         guard state.apply(event) else { return }
 
         switch state.status {
         case .recording:
             startTimer()
+            startCapture(rect: state.selectedRect, fps: state.fps)
         case .converting:
             stopTimer()
-            // PLACEHOLDER (Iteration 4/5): there is no capture pipeline yet, so
-            // nothing to convert — advance shortly so the UI doesn't get stuck.
-            scheduleAfter(0.4) { $0.send(.conversionFinished) }
+            finishCapture()
         case .done:
             stopTimer()
             // PLACEHOLDER (Iteration 5/6): auto-return to idle after showing
@@ -42,6 +50,29 @@ final class RecordingStore {
             scheduleAfter(1.5) { $0.send(.reset) }
         case .idle, .selecting:
             stopTimer()
+        }
+    }
+
+    // MARK: - Capture
+
+    private func startCapture(rect: CGRect, fps: RecordingState.FrameRate) {
+        Task {
+            do {
+                try await coordinator.start(captureRect: rect, fps: fps)
+            } catch {
+                print("[GifBar] failed to start capture: \(error)")
+                send(.reset)
+            }
+        }
+    }
+
+    private func finishCapture() {
+        Task {
+            let url = await coordinator.stop()
+            lastRecordingURL = url
+            print("[GifBar] recording written to: \(url?.path ?? "<none>")")
+            // TODO: Iteration 5 — convert `url` to GIF before finishing.
+            send(.conversionFinished)
         }
     }
 
