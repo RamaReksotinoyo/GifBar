@@ -20,8 +20,9 @@ final class RecordingStore {
     /// ``send(_:)`` (and the internal timer).
     private(set) var state = RecordingState()
 
-    /// Temp `.mov` produced by the last recording, awaiting GIF conversion
-    /// (Iteration 5).
+    /// The most recent finished output: the `.gif` once conversion succeeds, or
+    /// the source `.mov` as a fallback if conversion failed. Consumed by the
+    /// output handler (Iteration 6).
     private(set) var lastRecordingURL: URL?
 
     private let coordinator: SCStreamCoordinator
@@ -67,11 +68,27 @@ final class RecordingStore {
     }
 
     private func finishCapture() {
+        let fps = state.fps
         Task {
-            let url = await coordinator.stop()
-            lastRecordingURL = url
-            print("[GifBar] recording written to: \(url?.path ?? "<none>")")
-            // TODO: Iteration 5 — convert `url` to GIF before finishing.
+            let movieURL = await coordinator.stop()
+            guard let movieURL else {
+                print("[GifBar] no recording to convert")
+                send(.conversionFinished)
+                return
+            }
+
+            do {
+                let gifURL = try await MovieToGIFConverter().convert(movieURL: movieURL, fps: fps)
+                lastRecordingURL = gifURL
+                // SPEC §4.4: the temp .mov is an intermediate; drop it now that
+                // the GIF exists.
+                try? FileManager.default.removeItem(at: movieURL)
+                print("[GifBar] GIF written to: \(gifURL.path)")
+            } catch {
+                // Keep the .mov so the recording isn't lost if encoding fails.
+                print("[GifBar] GIF conversion failed: \(error)")
+                lastRecordingURL = movieURL
+            }
             send(.conversionFinished)
         }
     }

@@ -84,17 +84,32 @@ Iterasi 4 adalah jantung aplikasi.
 
 ---
 
-## Iterasi 5 — GIF encoder (§4.5)
+## Iterasi 5 — GIF encoder (§4.5) — SELESAI
 **Tujuan:** temp recording → `.gif`.
 
-- [ ] `CGImageDestination` (UTType GIF), tulis frame + delay centisecond
-- [ ] Floyd-Steinberg dithering via `kCGImagePropertyGIFDictionary`
-- [ ] Frame-dropping saat lag: drop frame, pertahankan timestamp
+- [x] `GIFEncoder` murni (`nonisolated struct`): bungkus `CGImageDestination` (UTType GIF), streaming 1 frame/append, loop count 0, delay centisecond
+- [x] `MovieToGIFConverter` (`nonisolated`): `AVAssetReader` decode 1 frame at a time → `CGImage` via `CIContext` → encoder (RAM datar, §4.4)
+- [x] Frame-dropping saat fps target < sumber: drop frame, timeline maju per slot `1/fps` (bukan stretch delay)
+- [x] Wire ke `RecordingStore.finishCapture()`: `.mov` → convert → simpan `.gif` ke `lastRecordingURL` → **hapus temp `.mov`** (§4.4). Gagal konversi → fallback ke `.mov`.
+- [x] Unit tests `GIFEncoder` (frame count, loop, delay, rounding, empty) + integration `.mov→.gif` (valid, loop, dimensi, frame-drop, bad-file) — 9 tests
 
-**Bukti selesai:** `.gif` valid, loop, durasi & fps benar; ukuran file sebanding tabel §4.5.
+- [x] **Verifikasi runtime**: Record→Stop menghasilkan `.gif` valid (terbukti: 740×802 dari seleksi 739×802 — even-rounding jalan; 164 frame; loop=0 selamanya; temp `.mov` sesi terhapus)
 
-> Cek di sini: rute `.mov → decode → GIF` lossy 2×. Pertimbangkan feed `CGImage`
-> langsung dari capture; ukur perbedaannya.
+**Bukti:** build + `xcodebuild test` hijau (53 tests) + verifikasi runtime sukses. **Iterasi 5 SELESAI.**
+
+### Catatan implementasi (koreksi terhadap SPEC)
+1. **`capacity` bukan "hint".** Argumen count di `CGImageDestinationCreateWithURL`
+   adalah **kapasitas keras**: menambah frame melebihi angka itu membuat
+   `finalize()` gagal. Converter menghitung batas-atas = `ceil(durasi × fps) + 2`.
+2. **Dithering Floyd–Steinberg tidak punya key publik.** SPEC §4.5 bilang "via
+   `kCGImagePropertyGIFDictionary`", tapi ImageIO **tidak** mengekspos toggle
+   Floyd–Steinberg. Dithering terjadi **otomatis** saat ImageIO kuantisasi tiap
+   frame ke palet 256 warna GIF. Jadi tujuan §4.5 tercapai lewat quantizer
+   bawaan, bukan flag eksplisit. (Didokumentasikan di docstring `GIFEncoder`.)
+
+> Belum diukur: ukuran file vs tabel §4.5 (butuh rekaman nyata). Rute
+> `.mov → decode → GIF` lossy 2× — kandidat optimasi (feed `CGImage` langsung
+> dari capture), **tidak** dikerjakan di MVP ini.
 
 ---
 
