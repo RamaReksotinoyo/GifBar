@@ -114,11 +114,27 @@ Iterasi 4 adalah jantung aplikasi.
 ---
 
 ## Iterasi 6 — Output handler (§4.6)
-- [ ] Save to folder (Downloads/Desktop/custom)
-- [ ] Copy to Clipboard (`NSPasteboard`)
-- [ ] Pilihan output di Preferences
+**Tujuan:** GIF keluar dari tmp sandbox → tersimpan ke folder pilihan user.
 
-**Bukti selesai:** GIF tersimpan di lokasi pilihan, atau ter-paste ke app lain.
+**KEPUTUSAN (revisi SPEC §2): App Sandbox TETAP ON** demi peluang Mac App Store.
+Folder bebas dipilih via `NSOpenPanel` + **security-scoped bookmark** (Rasa A:
+pilih sekali → auto-save). Copy-to-Clipboard **ditunda ke Iterasi 7**.
+
+- [x] `Preferences` struct (`Sendable`) + `PreferencesStore` (`@Observable`): simpan/resolve bookmark folder via `UserDefaults`; `revealInFinder`
+- [x] `OutputHandler` (`nonisolated`): pindah GIF ke folder, nama berstempel waktu, buat folder bila perlu, hindari tabrakan nama
+- [x] `ENABLE_USER_SELECTED_FILES` `readonly` → `readwrite`; sandbox tetap ON
+- [x] Wire `RecordingStore`: sesudah konversi → save ke folder bookmark (start/stop security scope) → reveal di Finder
+- [x] Menu "Choose Save Folder…" (`NSOpenPanel`) → simpan bookmark
+- [x] Unit tests `OutputHandler` (move, nama, folder, tabrakan) + `Preferences` (round-trip `UserDefaults`) — 7 tests
+- [ ] **Verifikasi runtime**: pilih folder → rekam → GIF muncul di folder & bisa dibuka
+
+**Bukti:** build + `xcodebuild test` hijau (60 tests). Verifikasi runtime pending.
+
+> **Catatan bug runtime (terpecahkan):** deinit class `@MainActor` (`PreferencesStore`)
+> kena double-free libmalloc lewat shim back-deploy concurrency di deployment
+> target 14.0 (crash saat `XCTMemoryChecker` dealloc objek tes). Diatasi dengan
+> `nonisolated deinit {}`. Relevan juga untuk store `@MainActor` lain bila kelak
+> di-dealloc dalam tes.
 
 ---
 
@@ -136,3 +152,6 @@ Iterasi 4 adalah jantung aplikasi.
 2. §3.3 (SoA `pixelPool`) bertabrakan dengan §4.4 (temp-file pipeline). Pilih satu di Iterasi 4.
 3. `enum FrameRate` (§4.3) belum menandai default; §4.5 bilang 15 FPS default.
 4. Onboarding (§5) hanya sebut Screen Recording; global shortcut butuh Accessibility juga.
+
+
+

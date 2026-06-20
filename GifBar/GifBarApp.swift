@@ -14,14 +14,20 @@ struct GifBarApp: App {
     /// content (which opens it) and the view (which dismisses it).
     static let onboardingWindowID = "onboarding"
 
+    /// Output preferences (save folder, reveal-in-Finder), shared by the store
+    /// that writes GIFs and the menu that lets the user pick a folder.
+    private let preferences = PreferencesStore()
+
     /// Holds the recording lifecycle state, observed by the menu.
-    private let store = RecordingStore()
+    private let store: RecordingStore
 
     /// Owns the selection panel's lifetime; created once so it survives the
     /// repeated re-evaluation of the menu bar content.
     private let overlayController = SelectionOverlayController()
 
     init() {
+        store = RecordingStore(preferences: preferences)
+
         // The selection panel reports its outcome straight into the state
         // machine: a committed rect starts recording, Esc cancels.
         overlayController.onCommit = { [store] rect in
@@ -34,7 +40,7 @@ struct GifBarApp: App {
 
     var body: some Scene {
         MenuBarExtra("GifBar", systemImage: "record.circle") {
-            MenuBarContent(store: store, overlayController: overlayController)
+            MenuBarContent(store: store, overlayController: overlayController, preferences: preferences)
         }
 
         Window("Welcome to GifBar", id: Self.onboardingWindowID) {
@@ -62,6 +68,9 @@ struct MenuBarContent: View {
     /// Coordinator that presents the floating selection panel.
     let overlayController: SelectionOverlayController
 
+    /// Output preferences, including the chosen save folder.
+    let preferences: PreferencesStore
+
     /// The permission gateway; injectable for previews and tests.
     var permission: ScreenRecordingPermission = .live
 
@@ -69,6 +78,8 @@ struct MenuBarContent: View {
         statusItems
 
         Divider()
+
+        Button("Choose Save Folder…") { chooseSaveFolder() }
 
         Button("Preferences…") {
             // TODO: Iteration 7 — open the Preferences panel.
@@ -119,5 +130,25 @@ struct MenuBarContent: View {
         }
         store.send(.selectArea)
         overlayController.present()
+    }
+
+    /// Lets the user pick the folder finished GIFs are saved to. The choice is
+    /// persisted as a security-scoped bookmark so it survives relaunches under
+    /// the sandbox (SPEC §4.6).
+    private func chooseSaveFolder() {
+        NSApp.activate(ignoringOtherApps: true)
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose"
+        panel.message = "Choose where GifBar saves recorded GIFs."
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try preferences.setSaveFolder(url)
+        } catch {
+            print("[GifBar] failed to save folder bookmark: \(error)")
+        }
     }
 }

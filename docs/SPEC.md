@@ -20,6 +20,14 @@ GifBar adalah aplikasi macOS utility modern yang berfungsi merekam area layar te
 
 **Distribution:** Direct distribution (notarized, bukan App Store) — menghindari sandbox restriction pada akses temp directory dan clipboard.
 
+> **REVISI (Iterasi 6):** Keputusan ini **dibalik** — App Sandbox **tetap ON**
+> (`ENABLE_APP_SANDBOX = YES`) demi membuka peluang distribusi via Mac App Store.
+> Konsekuensi yang sudah ditangani: save ke folder pilihan user memakai
+> **security-scoped bookmark** (`ENABLE_USER_SELECTED_FILES = readwrite`).
+> ScreenCaptureKit & clipboard tetap jalan di sandbox. **Dampak ke Iterasi 7:**
+> global shortcut (`NSEvent.addGlobalMonitorForEvents`) kemungkinan terbatas di
+> sandbox/App Store — perlu dievaluasi ulang di iterasi itu.
+
 ---
 
 ## 3. Design Philosophy: Data-Oriented, Value-First

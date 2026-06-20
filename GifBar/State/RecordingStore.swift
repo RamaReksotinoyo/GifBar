@@ -5,6 +5,7 @@
 //  Iteration 3 — State machine (SPEC §4.3).
 //
 
+import AppKit
 import Foundation
 import Observation
 
@@ -26,10 +27,13 @@ final class RecordingStore {
     private(set) var lastRecordingURL: URL?
 
     private let coordinator: SCStreamCoordinator
+    private let preferences: PreferencesStore
     private var timer: Timer?
 
-    init(coordinator: SCStreamCoordinator = SCStreamCoordinator()) {
+    init(coordinator: SCStreamCoordinator = SCStreamCoordinator(),
+         preferences: PreferencesStore? = nil) {
         self.coordinator = coordinator
+        self.preferences = preferences ?? PreferencesStore()
     }
 
     /// Applies an event to the state machine and reconciles side effects
@@ -79,17 +83,45 @@ final class RecordingStore {
 
             do {
                 let gifURL = try await MovieToGIFConverter().convert(movieURL: movieURL, fps: fps)
-                lastRecordingURL = gifURL
                 // SPEC §4.4: the temp .mov is an intermediate; drop it now that
                 // the GIF exists.
                 try? FileManager.default.removeItem(at: movieURL)
-                print("[GifBar] GIF written to: \(gifURL.path)")
+                lastRecordingURL = deliverOutput(gifURL: gifURL)
             } catch {
                 // Keep the .mov so the recording isn't lost if encoding fails.
                 print("[GifBar] GIF conversion failed: \(error)")
                 lastRecordingURL = movieURL
             }
             send(.conversionFinished)
+        }
+    }
+
+    /// Moves the finished GIF into the user's chosen save folder (SPEC §4.6) and
+    /// optionally reveals it in Finder. Falls back to leaving the GIF in temp if
+    /// no folder is configured or saving fails, so the recording is never lost.
+    ///
+    /// - Returns: The final on-disk URL of the GIF.
+    private func deliverOutput(gifURL: URL) -> URL {
+        guard let (folder, _) = preferences.resolveSaveFolder() else {
+            print("[GifBar] no save folder set; GIF left at \(gifURL.path)")
+            return gifURL
+        }
+
+        // Sandbox: a bookmark-resolved URL must be unlocked for the duration of
+        // the file operation.
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+        do {
+            let savedURL = try OutputHandler().save(gifAt: gifURL, toFolder: folder)
+            print("[GifBar] GIF saved to: \(savedURL.path)")
+            if preferences.preferences.revealInFinder {
+                NSWorkspace.shared.activateFileViewerSelecting([savedURL])
+            }
+            return savedURL
+        } catch {
+            print("[GifBar] failed to save GIF to folder: \(error)")
+            return gifURL
         }
     }
 
