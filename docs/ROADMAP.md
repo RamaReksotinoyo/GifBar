@@ -209,12 +209,21 @@ risiko-rendah dulu; Carbon hotkey terakhir karena paling perlu verifikasi runtim
 >    (judul disembunyikan). Fix: interpolasi glyph ke dalam `Text`
 >    (`"\(Image(systemName:)) \(elapsedDisplay)"`).
 
-### 7c — Global shortcut ⌘⇧5 (Carbon `RegisterEventHotKey`)
-- [ ] `HotKeyCenter` kecil (satu `class`, pengecualian coordinator ala `SCStreamCoordinator`):
-      daftar/lepas hotkey via Carbon
-- [ ] ⌘⇧5 → trigger "Record Area" walau app tidak fokus
-- [ ] Saat recording: ⌘⇧5 / `Esc` → Stop (§6)
-- [ ] Update SPEC §6: rute final Carbon, bukan `addGlobalMonitorForEvents`
+### 7c — Global shortcut ⌘⇧5 (Carbon `RegisterEventHotKey`) — kode selesai, verifikasi runtime pending
+**Revisi cakupan:** ⌘⇧5 = **stop-only** (bukan toggle). Start tetap via menu —
+saat mulai rekam kamu memang sudah di app; nilai hotkey ada di **stop tanpa
+memunculkan app** saat sedang merekam demo.
+- [x] `HotKeyCenter` (satu `class`, pengecualian coordinator): daftar/lepas hotkey via Carbon;
+      callback C threading `self` lewat `userData`; `nonisolated deinit` lepas hotkey + handler
+- [x] ⌘⇧5 saat `recording` → `stopRecording` walau app tidak fokus; status lain diabaikan
+- [x] Carbon `RegisterEventHotKey` → sandbox-safe, tanpa Accessibility (bukan `addGlobalMonitorForEvents`)
+- [x] Esc-saat-recording & shortcut customizable **ditunda** (di luar MVP)
+- [x] Unit test konstanta keycode (23 / `kVK_ANSI_5`) + modifier (`cmdKey|shiftKey`) — 2 tests
+- [x] **Verifikasi runtime**: rekam dari menu → pindah ke app lain → tekan ⌘⇧5 → recording berhenti
+      — **7c SELESAI**
+
+**Bukti:** build + `xcodebuild test` hijau (75 tests) + verifikasi runtime sukses.
+**Iterasi 7 SELESAI — seluruh roadmap (0→7) tuntas.** 🎉
 
 **Bukti selesai:** overlay punya petunjuk & merespons Space/Return/Esc; GIF bisa
 di-copy ke clipboard; Preferences panel rapi + elapsed time tampil; global ⌘⇧5

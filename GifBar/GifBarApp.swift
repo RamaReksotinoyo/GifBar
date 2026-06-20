@@ -25,6 +25,9 @@ struct GifBarApp: App {
     /// repeated re-evaluation of the menu bar content.
     private let overlayController = SelectionOverlayController()
 
+    /// Owns the global ⌘⇧5 hotkey, used to stop a recording from any app.
+    private let hotKeyCenter = HotKeyCenter()
+
     init() {
         store = RecordingStore(preferences: preferences)
 
@@ -36,6 +39,14 @@ struct GifBarApp: App {
         overlayController.onCancel = { [store] in
             store.send(.cancelSelection)
         }
+
+        // ⌘⇧5 stops an in-progress recording without focusing the app. Starting
+        // stays a menu action — when starting you are already in the app.
+        hotKeyCenter.onTrigger = { [store] in
+            guard store.state.status == .recording else { return }
+            store.send(.stopRecording)
+        }
+        hotKeyCenter.register()
     }
 
     var body: some Scene {

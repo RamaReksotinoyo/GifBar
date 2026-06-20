@@ -211,6 +211,13 @@ Tambahan di `Info.plist`:
 
 Global shortcut didaftarkan via `NSEvent.addGlobalMonitorForEvents` agar aktif bahkan saat app tidak di-focus.
 
+> **REVISI (Iterasi 7c):** Rute final adalah **Carbon `RegisterEventHotKey`**,
+> bukan `NSEvent.addGlobalMonitorForEvents` — yang terakhir butuh Accessibility
+> permission dan terbatas di App Sandbox (lihat revisi §2), sedangkan Carbon
+> sandbox-safe & tanpa izin tambahan. Cakupan MVP **dipersempit jadi stop-only**:
+> ⌘⇧5 hanya menghentikan rekaman yang sedang berjalan (start tetap via menu).
+> `Esc`-saat-recording dan shortcut **customizable** ditunda di luar MVP.
+
 ---
 
 ## 7. Non-Goals (Explicitly Out of Scope)
