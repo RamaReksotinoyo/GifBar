@@ -139,11 +139,51 @@ pilih sekali → auto-save). Copy-to-Clipboard **ditunda ke Iterasi 7**.
 ---
 
 ## Iterasi 7 — Shortcuts & polish (§6)
-- [ ] Global shortcut `⌘⇧5` via `NSEvent.addGlobalMonitorForEvents` (+ Accessibility permission)
-- [ ] `Space`/`Return` start, `Esc` cancel saat overlay aktif
-- [ ] Preferences panel rapi + indikator elapsed time saat recording
+**Tujuan:** input keyboard (lokal + global), output clipboard, dan UI rapi.
 
-**Bukti selesai:** shortcut jalan walau app tidak fokus; full flow end-to-end mulus.
+Dipecah 4 sub-bagian. **Urutan kerja: 7a → 7b → 7d → 7c** (yang tanpa-izin &
+risiko-rendah dulu; Carbon hotkey terakhir karena paling perlu verifikasi runtime).
+
+> **KOREKSI SPEC §6:** global shortcut **tidak** memakai
+> `NSEvent.addGlobalMonitorForEvents` — itu butuh **Accessibility permission** dan
+> terbatas/diblokir di App Sandbox (keputusan Iterasi 6), tidak lolos App Store.
+> Rute final: **Carbon `RegisterEventHotKey`** — resmi, sandbox-safe, tanpa izin
+> tambahan, tetap zero-dependency (filosofi SPEC).
+
+### 7a — Input lokal overlay (ringan, no permission) — kode selesai, verifikasi runtime pending
+- [x] Petunjuk on-overlay di `SelectionOverlayView`: di bawah readout `W × H`,
+      baris kecil & redup `⏎ / Space to start · Esc to cancel`
+- [x] Bungkus readout+petunjuk jadi `VStack` dalam `RoundedRectangle(cornerRadius: 10)`
+      (ganti `Capsule`, lebih pas untuk dua baris)
+- [x] Sembunyikan baris petunjuk saat panel sempit (`width < 220`) agar tak kepotong —
+      lewat fungsi murni `shouldShowHint(forWidth:)`
+- [x] Wiring `Space`/`Return` → Start, `Esc` → cancel **sudah ada sejak Iterasi 2/3**
+      (`installKeyMonitor` → `onCommit`/`onCancel`); dikonfirmasi tetap jalan
+- [x] Unit test logika visibilitas petunjuk (4 tests)
+- [x] **Verifikasi runtime**: buka overlay → petunjuk tampil; sempitkan → petunjuk hilang;
+      Space/Return mulai rekam; Esc batal — **7a SELESAI**
+
+### 7b — Copy-to-Clipboard (utang Iterasi 6, §4.6)
+- [ ] Tulis GIF ke `NSPasteboard` (data `.gif` + file URL → bisa di-paste ke chat/editor)
+- [ ] Tambah `copyToClipboard: Bool` di `Preferences` (round-trip `UserDefaults`, pola sudah ada)
+- [ ] Mode output bisa kombinasi: Save to folder dan/atau Copy to clipboard
+- [ ] Unit test bagian pasteboard yang bisa diuji (tipe data tertulis benar)
+
+### 7d — Polish UI
+- [ ] Indikator **elapsed time** saat recording (pakai `elapsedSecs` + `formatElapsed` yang sudah ada)
+- [ ] **Preferences panel** rapi: fps picker, toggle reveal-in-Finder, toggle copy-to-clipboard,
+      tombol pilih folder (gantikan menu item "Choose Save Folder…" yang lepasan)
+
+### 7c — Global shortcut ⌘⇧5 (Carbon `RegisterEventHotKey`)
+- [ ] `HotKeyCenter` kecil (satu `class`, pengecualian coordinator ala `SCStreamCoordinator`):
+      daftar/lepas hotkey via Carbon
+- [ ] ⌘⇧5 → trigger "Record Area" walau app tidak fokus
+- [ ] Saat recording: ⌘⇧5 / `Esc` → Stop (§6)
+- [ ] Update SPEC §6: rute final Carbon, bukan `addGlobalMonitorForEvents`
+
+**Bukti selesai:** overlay punya petunjuk & merespons Space/Return/Esc; GIF bisa
+di-copy ke clipboard; Preferences panel rapi + elapsed time tampil; global ⌘⇧5
+jalan walau app tidak fokus; full flow end-to-end mulus.
 
 ---
 
