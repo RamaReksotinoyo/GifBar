@@ -186,8 +186,9 @@ risiko-rendah dulu; Carbon hotkey terakhir karena paling perlu verifikasi runtim
 ### 7d — Polish UI — kode selesai, verifikasi runtime pending
 - [x] Indikator **elapsed time** di label menu bar (`MenuBarLabel`): idle → glyph `record.circle`;
       recording → `stop.circle.fill` + `elapsedDisplay`; converting → `circle.dotted`
-- [x] **Preferences panel** (`PreferencesView` via scene `Settings`, ⌘, otomatis): fps picker,
-      save folder + path + Choose…, toggle reveal-in-Finder, toggle copy-to-clipboard
+- [x] **Preferences sebagai submenu** (gaya Amphetamine, hover-to-expand) — bukan window:
+      fps picker (`.inline`, ✓), toggle Reveal in Finder, toggle Copy to Clipboard,
+      Choose Save Folder…, info "Saved to: <folder>"
 - [x] `fps` jadi preference tersimpan, disuntik ke state saat `.startRecording` (SPEC §4.5)
 - [x] Item menu lepasan dipindah ke panel; toggle Copy-to-Clipboard tetap di menu untuk akses cepat;
       "Preferences…" pakai `SettingsLink`
@@ -196,16 +197,15 @@ risiko-rendah dulu; Carbon hotkey terakhir karena paling perlu verifikasi runtim
       di menu bar — **7d SELESAI**
 
 > **Catatan bug runtime (terpecahkan):**
-> 1. **Panel tak muncul.** Di agent app (LSUIElement), scene `Settings` +
->    `SettingsLink`/`openSettings()`/`openWindow` dari `MenuBarExtra` membuka
->    nol yang terlihat. Fix: kelola `NSWindow` sendiri lewat
->    `PreferencesWindowController` (pola sama `SelectionOverlayController`).
->    > ⚠️ Window onboarding (Iterasi 1) memakai `openWindow` yang sama —
->    > kemungkinan kena bug serupa; perlu dipindah ke pola AppKit nanti.
-> 2. **Form ke-clip.** Grouped `Form` di dalam `NSWindow` polos tak punya wadah
->    untuk meregang → section atas (fps) terpotong. Fix: `.frame(width:height:)`
->    eksplisit + window `.resizable`.
-> 3. **Elapsed tak terlihat di menu bar.** `Label` di menu bar dirender ikon-saja
+> 1. **Window Preferences tak pernah muncul.** Di agent app (LSUIElement), scene
+>    `Settings` + `SettingsLink`/`openSettings()`/`openWindow` dari `MenuBarExtra`
+>    membuka nol yang terlihat. Sempat dicoba kelola `NSWindow` sendiri, lalu
+>    **diputuskan ganti pendekatan**: Preferences jadi **submenu** (gaya
+>    Amphetamine) — tak ada window sama sekali, jauh lebih sederhana & native.
+>    `PreferencesWindowController`/`PreferencesView` dihapus.
+>    > ⚠️ Window onboarding (Iterasi 1) masih memakai `openWindow` yang sama —
+>    > berisiko kena bug serupa; perlu diverifikasi/dipindah ke AppKit nanti.
+> 2. **Elapsed tak terlihat di menu bar.** `Label` di menu bar dirender ikon-saja
 >    (judul disembunyikan). Fix: interpolasi glyph ke dalam `Text`
 >    (`"\(Image(systemName:)) \(elapsedDisplay)"`).
 
