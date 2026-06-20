@@ -28,6 +28,9 @@ struct Preferences: Equatable, Sendable {
     /// Copy each finished GIF to the system clipboard. Independent of saving to
     /// a folder — both, either, or neither can be enabled.
     var copyToClipboard: Bool = false
+
+    /// Capture frame rate used for new recordings (SPEC §4.5).
+    var fps: RecordingState.FrameRate = .fps15
 }
 
 /// Observable store that loads/saves ``Preferences`` and resolves the save
@@ -40,6 +43,7 @@ final class PreferencesStore {
         static let folderBookmark = "output.folderBookmark"
         static let revealInFinder = "output.revealInFinder"
         static let copyToClipboard = "output.copyToClipboard"
+        static let fps = "recording.fps"
     }
 
     /// Current preferences. Mutated only through the methods below so each
@@ -57,6 +61,10 @@ final class PreferencesStore {
         }
         if defaults.object(forKey: Key.copyToClipboard) != nil {
             prefs.copyToClipboard = defaults.bool(forKey: Key.copyToClipboard)
+        }
+        if let raw = defaults.object(forKey: Key.fps) as? Int,
+           let fps = RecordingState.FrameRate(rawValue: UInt8(raw)) {
+            prefs.fps = fps
         }
         self.preferences = prefs
     }
@@ -87,6 +95,11 @@ final class PreferencesStore {
     func setCopyToClipboard(_ copy: Bool) {
         preferences.copyToClipboard = copy
         defaults.set(copy, forKey: Key.copyToClipboard)
+    }
+
+    func setFPS(_ fps: RecordingState.FrameRate) {
+        preferences.fps = fps
+        defaults.set(Int(fps.rawValue), forKey: Key.fps)
     }
 
     /// Resolves the saved bookmark to a usable folder URL, or `nil` if none is

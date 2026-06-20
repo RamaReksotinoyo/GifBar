@@ -39,6 +39,12 @@ final class RecordingStore {
     /// Applies an event to the state machine and reconciles side effects
     /// (timer, capture lifecycle) with the resulting status.
     func send(_ event: RecordingState.Event) {
+        // Apply the user's chosen frame rate as a recording begins. `apply`
+        // leaves `fps` untouched, so this preference-injection survives the
+        // transition (SPEC §4.5).
+        if case .startRecording = event {
+            state.fps = preferences.preferences.fps
+        }
         guard state.apply(event) else { return }
 
         switch state.status {

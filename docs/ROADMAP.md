@@ -183,10 +183,31 @@ risiko-rendah dulu; Carbon hotkey terakhir karena paling perlu verifikasi runtim
 >    clipboard **di dalam blok scoped** agar file-URL flavor dapat sandbox extension
 >    valid. File URL prioritas pertama → chat app ambil berkas `.gif` → animasi.
 
-### 7d — Polish UI
-- [ ] Indikator **elapsed time** saat recording (pakai `elapsedSecs` + `formatElapsed` yang sudah ada)
-- [ ] **Preferences panel** rapi: fps picker, toggle reveal-in-Finder, toggle copy-to-clipboard,
-      tombol pilih folder (gantikan menu item "Choose Save Folder…" yang lepasan)
+### 7d — Polish UI — kode selesai, verifikasi runtime pending
+- [x] Indikator **elapsed time** di label menu bar (`MenuBarLabel`): idle → glyph `record.circle`;
+      recording → `stop.circle.fill` + `elapsedDisplay`; converting → `circle.dotted`
+- [x] **Preferences panel** (`PreferencesView` via scene `Settings`, ⌘, otomatis): fps picker,
+      save folder + path + Choose…, toggle reveal-in-Finder, toggle copy-to-clipboard
+- [x] `fps` jadi preference tersimpan, disuntik ke state saat `.startRecording` (SPEC §4.5)
+- [x] Item menu lepasan dipindah ke panel; toggle Copy-to-Clipboard tetap di menu untuk akses cepat;
+      "Preferences…" pakai `SettingsLink`
+- [x] Unit test round-trip `fps` (default 15, persist) — 2 tests
+- [x] **Verifikasi runtime**: panel terbuka, fps picker jalan, elapsed time tampil & berjalan
+      di menu bar — **7d SELESAI**
+
+> **Catatan bug runtime (terpecahkan):**
+> 1. **Panel tak muncul.** Di agent app (LSUIElement), scene `Settings` +
+>    `SettingsLink`/`openSettings()`/`openWindow` dari `MenuBarExtra` membuka
+>    nol yang terlihat. Fix: kelola `NSWindow` sendiri lewat
+>    `PreferencesWindowController` (pola sama `SelectionOverlayController`).
+>    > ⚠️ Window onboarding (Iterasi 1) memakai `openWindow` yang sama —
+>    > kemungkinan kena bug serupa; perlu dipindah ke pola AppKit nanti.
+> 2. **Form ke-clip.** Grouped `Form` di dalam `NSWindow` polos tak punya wadah
+>    untuk meregang → section atas (fps) terpotong. Fix: `.frame(width:height:)`
+>    eksplisit + window `.resizable`.
+> 3. **Elapsed tak terlihat di menu bar.** `Label` di menu bar dirender ikon-saja
+>    (judul disembunyikan). Fix: interpolasi glyph ke dalam `Text`
+>    (`"\(Image(systemName:)) \(elapsedDisplay)"`).
 
 ### 7c — Global shortcut ⌘⇧5 (Carbon `RegisterEventHotKey`)
 - [ ] `HotKeyCenter` kecil (satu `class`, pengecualian coordinator ala `SCStreamCoordinator`):

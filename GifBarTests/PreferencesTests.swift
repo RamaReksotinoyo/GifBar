@@ -70,4 +70,17 @@ final class PreferencesTests: XCTestCase {
         let reloaded = PreferencesStore(defaults: defaults)
         XCTAssertTrue(reloaded.preferences.copyToClipboard)
     }
+
+    func testFPSDefaultsTo15() {
+        let store = PreferencesStore(defaults: defaults)
+        XCTAssertEqual(store.preferences.fps, .fps15)
+    }
+
+    func testFPSPersistsAcrossStores() {
+        let store = PreferencesStore(defaults: defaults)
+        store.setFPS(.fps24)
+
+        let reloaded = PreferencesStore(defaults: defaults)
+        XCTAssertEqual(reloaded.preferences.fps, .fps24)
+    }
 }
