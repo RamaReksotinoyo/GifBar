@@ -5,8 +5,14 @@
 //  Iteration 5 — GIF conversion engine (SPEC §4.5).
 //
 //  Orchestrates the .mov → .gif conversion: decode the temp movie one frame at
-//  a time and hand each frame to a GIFEncoder. Decoding streams (never holding
-//  more than one frame) so RAM stays flat for long recordings (SPEC §4.4).
+//  a time and hand each frame to a GIFEncoder. Each decode iteration runs inside
+//  an `autoreleasepool` so per-frame temporaries are freed immediately instead
+//  of accumulating across the loop (SPEC §4.4).
+//
+//  Caveat: this caps the decode side at ~one frame, but ImageIO's
+//  CGImageDestination still buffers every appended frame until `finalize()`
+//  (it does not stream GIF to disk), so peak memory still grows with frame
+//  count — just far less than before the autoreleasepool.
 //
 
 import AVFoundation
@@ -69,20 +75,27 @@ nonisolated struct MovieToGIFConverter {
         var nextEmitTime = 0.0
 
         while let sample = output.copyNextSampleBuffer() {
-            defer { CMSampleBufferInvalidate(sample) }
-            guard let imageBuffer = CMSampleBufferGetImageBuffer(sample) else { continue }
+            // Drain each frame's temporaries (CIImage, the decoded CGImage, Core
+            // Image's working buffers) immediately. In an async function the
+            // thread's autorelease pool is not drained until `convert` returns,
+            // so without this every decoded frame would pile up and memory would
+            // grow with the recording length. `return` here acts as `continue`.
+            autoreleasepool {
+                defer { CMSampleBufferInvalidate(sample) }
+                guard let imageBuffer = CMSampleBufferGetImageBuffer(sample) else { return }
 
-            let pts = CMSampleBufferGetPresentationTimeStamp(sample).seconds
-            // Drop frames that arrive before the next output slot; keep the
-            // timeline (don't stretch the delay of the frames we do keep).
-            guard pts >= nextEmitTime else { continue }
+                let pts = CMSampleBufferGetPresentationTimeStamp(sample).seconds
+                // Drop frames that arrive before the next output slot; keep the
+                // timeline (don't stretch the delay of the frames we do keep).
+                guard pts >= nextEmitTime else { return }
 
-            let ciImage = CIImage(cvPixelBuffer: imageBuffer)
-            guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else {
-                continue
+                let ciImage = CIImage(cvPixelBuffer: imageBuffer)
+                guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else {
+                    return
+                }
+                encoder.append(cgImage, delaySeconds: frameDelay)
+                nextEmitTime += frameDelay
             }
-            encoder.append(cgImage, delaySeconds: frameDelay)
-            nextEmitTime += frameDelay
         }
 
         if reader.status == .failed {
