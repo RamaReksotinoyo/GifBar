@@ -96,32 +96,59 @@ final class RecordingStore {
         }
     }
 
-    /// Moves the finished GIF into the user's chosen save folder (SPEC §4.6) and
-    /// optionally reveals it in Finder. Falls back to leaving the GIF in temp if
-    /// no folder is configured or saving fails, so the recording is never lost.
+    /// Routes the finished GIF to the user's configured outputs (SPEC §4.6):
+    /// saving to the chosen folder and/or copying to the clipboard. The two are
+    /// independent — both, either, or neither may be enabled. The GIF is never
+    /// lost: if saving fails or no folder is set, it stays in temp.
     ///
-    /// - Returns: The final on-disk URL of the GIF.
+    /// - Returns: The final on-disk URL of the GIF (the saved copy if any, else
+    ///   the temp file). This is also what gets copied to the clipboard.
     private func deliverOutput(gifURL: URL) -> URL {
+        let copyToClipboard = preferences.preferences.copyToClipboard
+
+        // Read the GIF bytes from temp now, while it is still freely readable.
+        // After saving, the file may live in a security-scoped folder, and the
+        // move removes the temp file, so the bytes must be captured first.
+        let clipboardData = copyToClipboard ? try? Data(contentsOf: gifURL) : nil
+
         guard let (folder, _) = preferences.resolveSaveFolder() else {
+            // No save folder: the GIF stays in temp (app container), which is
+            // freely readable, so its file URL works on the pasteboard as-is.
             print("[GifBar] no save folder set; GIF left at \(gifURL.path)")
+            if copyToClipboard { copyToPasteboard(data: clipboardData, fileURL: gifURL) }
             return gifURL
         }
 
         // Sandbox: a bookmark-resolved URL must be unlocked for the duration of
-        // the file operation.
+        // the file work — including writing the clipboard, so the file-URL
+        // flavor can be granted a sandbox extension the pasting app can use.
         let scoped = folder.startAccessingSecurityScopedResource()
         defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
         do {
             let savedURL = try OutputHandler().save(gifAt: gifURL, toFolder: folder)
             print("[GifBar] GIF saved to: \(savedURL.path)")
+            if copyToClipboard { copyToPasteboard(data: clipboardData, fileURL: savedURL) }
             if preferences.preferences.revealInFinder {
                 NSWorkspace.shared.activateFileViewerSelecting([savedURL])
             }
             return savedURL
         } catch {
             print("[GifBar] failed to save GIF to folder: \(error)")
+            if copyToClipboard { copyToPasteboard(data: clipboardData, fileURL: gifURL) }
             return gifURL
+        }
+    }
+
+    /// Copies the GIF to the clipboard, logging the outcome. The file URL must
+    /// point at a location the caller currently has access to (temp, or a
+    /// security-scoped folder while its scope is held) so the pasteboard can vend
+    /// a working sandbox extension for it.
+    private func copyToPasteboard(data: Data?, fileURL: URL) {
+        if let data, ClipboardWriter().writeGIF(data: data, fileURL: fileURL) {
+            print("[GifBar] GIF copied to clipboard")
+        } else {
+            print("[GifBar] failed to copy GIF to clipboard")
         }
     }
 

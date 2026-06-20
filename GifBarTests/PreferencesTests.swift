@@ -57,4 +57,17 @@ final class PreferencesTests: XCTestCase {
         let reloaded = PreferencesStore(defaults: defaults)
         XCTAssertTrue(reloaded.preferences.revealInFinder)
     }
+
+    func testCopyToClipboardDefaultsToFalse() {
+        let store = PreferencesStore(defaults: defaults)
+        XCTAssertFalse(store.preferences.copyToClipboard)
+    }
+
+    func testCopyToClipboardPersistsAcrossStores() {
+        let store = PreferencesStore(defaults: defaults)
+        store.setCopyToClipboard(true)
+
+        let reloaded = PreferencesStore(defaults: defaults)
+        XCTAssertTrue(reloaded.preferences.copyToClipboard)
+    }
 }

@@ -24,6 +24,10 @@ struct Preferences: Equatable, Sendable {
 
     /// Reveal each finished GIF in Finder after saving.
     var revealInFinder: Bool = true
+
+    /// Copy each finished GIF to the system clipboard. Independent of saving to
+    /// a folder — both, either, or neither can be enabled.
+    var copyToClipboard: Bool = false
 }
 
 /// Observable store that loads/saves ``Preferences`` and resolves the save
@@ -35,6 +39,7 @@ final class PreferencesStore {
     private enum Key {
         static let folderBookmark = "output.folderBookmark"
         static let revealInFinder = "output.revealInFinder"
+        static let copyToClipboard = "output.copyToClipboard"
     }
 
     /// Current preferences. Mutated only through the methods below so each
@@ -49,6 +54,9 @@ final class PreferencesStore {
         prefs.folderBookmark = defaults.data(forKey: Key.folderBookmark)
         if defaults.object(forKey: Key.revealInFinder) != nil {
             prefs.revealInFinder = defaults.bool(forKey: Key.revealInFinder)
+        }
+        if defaults.object(forKey: Key.copyToClipboard) != nil {
+            prefs.copyToClipboard = defaults.bool(forKey: Key.copyToClipboard)
         }
         self.preferences = prefs
     }
@@ -74,6 +82,11 @@ final class PreferencesStore {
     func setRevealInFinder(_ reveal: Bool) {
         preferences.revealInFinder = reveal
         defaults.set(reveal, forKey: Key.revealInFinder)
+    }
+
+    func setCopyToClipboard(_ copy: Bool) {
+        preferences.copyToClipboard = copy
+        defaults.set(copy, forKey: Key.copyToClipboard)
     }
 
     /// Resolves the saved bookmark to a usable folder URL, or `nil` if none is

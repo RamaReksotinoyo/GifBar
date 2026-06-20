@@ -81,6 +81,11 @@ struct MenuBarContent: View {
 
         Button("Choose Save Folder…") { chooseSaveFolder() }
 
+        Toggle("Copy to Clipboard", isOn: Binding(
+            get: { preferences.preferences.copyToClipboard },
+            set: { preferences.setCopyToClipboard($0) }
+        ))
+
         Button("Preferences…") {
             // TODO: Iteration 7 — open the Preferences panel.
         }

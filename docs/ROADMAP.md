@@ -163,11 +163,25 @@ risiko-rendah dulu; Carbon hotkey terakhir karena paling perlu verifikasi runtim
 - [x] **Verifikasi runtime**: buka overlay → petunjuk tampil; sempitkan → petunjuk hilang;
       Space/Return mulai rekam; Esc batal — **7a SELESAI**
 
-### 7b — Copy-to-Clipboard (utang Iterasi 6, §4.6)
-- [ ] Tulis GIF ke `NSPasteboard` (data `.gif` + file URL → bisa di-paste ke chat/editor)
-- [ ] Tambah `copyToClipboard: Bool` di `Preferences` (round-trip `UserDefaults`, pola sudah ada)
-- [ ] Mode output bisa kombinasi: Save to folder dan/atau Copy to clipboard
-- [ ] Unit test bagian pasteboard yang bisa diuji (tipe data tertulis benar)
+### 7b — Copy-to-Clipboard (utang Iterasi 6, §4.6) — kode selesai, verifikasi runtime pending
+- [x] `ClipboardWriter` (`@MainActor`): satu `NSPasteboardItem` dengan `.fileURL` +
+      data GIF (`com.compuserve.gif`); pasteboard injectable untuk test
+- [x] Tambah `copyToClipboard: Bool` di `Preferences` + setter (round-trip `UserDefaults`)
+- [x] `RecordingStore.deliverOutput` jadi kombinasi independen: save-to-folder dan/atau
+      clipboard; GIF tak pernah hilang (fallback temp)
+- [x] Menu toggle "Copy to Clipboard" (sementara di menu; pindah ke panel di 7d)
+- [x] Unit test `ClipboardWriter` (pakai `NSPasteboard(name:)` privat) + round-trip pref — 6 tests
+- [x] **Verifikasi runtime**: toggle ON → rekam → paste ke Telegram → GIF **animasi** terkirim
+      utuh (bukan PNG statis) — **7b SELESAI**
+
+> **Catatan bug runtime (terpecahkan, 2 lapis):**
+> 1. Clipboard dibaca **sesudah** GIF dipindah ke folder & scope ditutup → sandbox
+>    tolak baca. Fix: baca byte dari temp **sebelum** dipindah.
+> 2. File URL di clipboard menunjuk folder security-scoped tapi ditulis **setelah**
+>    scope dilepas → `Sandbox extension … failed to obtain (-20)`, app penerima tak
+>    bisa baca file → Telegram jatuh ke data-gambar → **PNG statis**. Fix: tulis
+>    clipboard **di dalam blok scoped** agar file-URL flavor dapat sandbox extension
+>    valid. File URL prioritas pertama → chat app ambil berkas `.gif` → animasi.
 
 ### 7d — Polish UI
 - [ ] Indikator **elapsed time** saat recording (pakai `elapsedSecs` + `formatElapsed` yang sudah ada)
